@@ -1,4 +1,4 @@
-use crate::hotspot::{WifiHotspot, WifiHotspotError};
+use crate::hotspot::{ManagedWifiHotspot, ManagedWifiHotspotTrait, WifiHotspot, WifiHotspotError};
 use crate::platforms::WiFi;
 use std::fmt;
 use std::process::Command;
@@ -50,6 +50,89 @@ pub enum Channel {
     Five = 5,
     /// Channel 6
     Six = 6,
+}
+
+impl ManagedWifiHotspot {
+    /// Start serving publicly an already created wireless hotspot.
+    pub fn start_hotspot(&mut self) -> Result<bool, WifiHotspotError> {
+        let output = Command::new("nmcli")
+            .args(&["con", "up", HOTSPOT_GROUP])
+            .output()
+            .map_err(|err| WifiHotspotError::FailedToStop(err))?;
+
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .as_ref()
+            .contains("Connection successfully activated"))
+    }
+
+    /// Stop serving a wireless network.
+    ///
+    /// **NOTE: All users connected will automatically be disconnected.**
+    pub fn stop_hotspot(&mut self) -> Result<bool, WifiHotspotError> {
+        let output = Command::new("nmcli")
+            .args(&["con", "down", HOTSPOT_GROUP])
+            .output()
+            .map_err(|err| WifiHotspotError::FailedToStop(err))?;
+
+        Ok(String::from_utf8_lossy(&output.stdout)
+            .as_ref()
+            .contains("Connection 'Hotspot' successfully deactivated"))
+    }
+}
+
+impl Drop for ManagedWifiHotspot {
+    fn drop(&mut self) {
+        let _ = self.stop_hotspot();
+        let command = vec![
+            "connection".to_string(),
+            "delete".to_string(),
+            HOTSPOT_GROUP.to_string(),
+        ];
+        let output = Command::new("nmcli").args(&command).spawn();
+        if let Ok(mut child) = output {
+            let _ = child.wait();
+        }
+    }
+}
+
+impl ManagedWifiHotspotTrait for WiFi {
+    /// Creates wireless hotspot service for host machine. This only creats the wifi network,
+    /// and isn't responsible for initiating the serving of the wifi network process.
+    /// To begin serving the hotspot, use ```start_hotspot()```.
+    fn create_managed_hotspot(
+        &mut self,
+        ssid: &str,
+        password: &str,
+        configuration: Option<&HotspotConfig>,
+    ) -> Result<ManagedWifiHotspot, WifiHotspotError> {
+        let mut command = vec![
+            "device".to_string(),
+            "wifi".to_string(),
+            "hotspot".to_string(),
+            "ifname".to_string(),
+            self.interface.to_string(),
+            "con-name".to_string(),
+            HOTSPOT_GROUP.to_string(),
+            "ssid".to_string(),
+            ssid.to_string(),
+            "password".to_string(),
+            password.to_string(),
+        ];
+
+        let mut cmd = generate_command_param_from_config(configuration);
+        command.append(&mut cmd);
+
+        let output = Command::new("nmcli")
+            .args(&command)
+            .status()
+            .map(|s| s.code() == Some(0))
+            .map_err(|_err| WifiHotspotError::CreationFailed)?;
+        if output {
+            Ok(ManagedWifiHotspot { _dummy: () })
+        } else {
+            Err(WifiHotspotError::CreationFailed)
+        }
+    }
 }
 
 /// Wireless hotspot functionality for a wifi interface.

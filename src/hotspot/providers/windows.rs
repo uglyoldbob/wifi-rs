@@ -8,7 +8,7 @@ use std::process::Command;
 pub struct HotspotConfig;
 
 impl WiFi {
-    /// Attempts to turn on a wireless networ if down.
+    /// Attempts to turn on a wireless network if down.
     fn try_turn_on_network_if_down() -> Result<(), WifiError> {
         if !Self::is_wifi_enabled()? {
             Self::turn_on().map_err(|err| WifiError::InterfaceFailedToOn)?;
@@ -20,7 +20,7 @@ impl WiFi {
 
 /// Wireless hotspot functionality for a wifi interface.
 impl WifiHotspot for WiFi {
-    /// Creates wireless hotspot service for host machine. This only creats the wifi network,
+    /// Creates wireless hotspot service for host machine. This only creates the wifi network,
     /// and isn't responsible for initiating the serving of the wifi network process.
     /// To begin serving the hotspot, use ```start_hotspot()```.
     fn create_hotspot(

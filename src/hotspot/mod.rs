@@ -20,6 +20,29 @@ pub enum WifiHotspotError {
     Other { kind: WifiError },
 }
 
+pub struct ManagedWifiHotspot {
+    _dummy: (),
+}
+
+/// Managed wireless hotspot functionality for a wifi interface
+pub trait ManagedWifiHotspotTrait: fmt::Debug + WifiInterface {
+    /// Creates wireless hotspot service for host machine. This only creates the wifi network,
+    /// and isn't responsible for initiating the serving of the wifi network process.
+    /// To begin serving the hotspot, use ```start_hotspot()```.
+    fn create_managed_hotspot(
+        &mut self,
+        ssid: &str,
+        password: &str,
+        configuration: Option<&HotspotConfig>,
+    ) -> Result<ManagedWifiHotspot, WifiHotspotError> {
+        let _a = ssid;
+        let _b = password;
+        let _c = configuration;
+
+        unimplemented!();
+    }
+}
+
 /// Wireless hotspot functionality for a wifi interface.
 pub trait WifiHotspot: fmt::Debug + WifiInterface {
     /// Creates wireless hotspot service for host machine. This only creates the wifi network,
